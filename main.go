@@ -5,14 +5,14 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/jinzhu/gorm"
 )
 
 func main() {
 	//Init Router
 	router := mux.NewRouter()
 
-	books = append(books, Book{ID: "1", Isbn: "438227", Title: "Book One", Author: &Author{Firstname: "John", Lastname: "Doe"}})
-	books = append(books, Book{ID: "2", Isbn: "454555", Title: "Book Two", Author: &Author{Firstname: "Steve", Lastname: "Smith"}})
+	InitialMigration()
 
 	//Endpoints
 	router.HandleFunc("/api/books", getBooks).Methods("GET")
@@ -25,4 +25,9 @@ func main() {
 
 }
 
-var books []Book
+func InitialMigration() {
+	db, err = gorm.Open("sqlite3", "test.db")
+	OpenDB()
+	defer db.Close()
+	db.AutoMigrate(&Book{}, &Author{})
+}

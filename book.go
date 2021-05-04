@@ -2,69 +2,87 @@ package main
 
 import (
 	"encoding/json"
-	"math/rand"
 	"net/http"
-	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
+var db *gorm.DB
+var err error
+
 type Book struct {
-	ID     string  `json:"id"`
-	Isbn   string  `json:"isbn"`
-	Title  string  `json:"title"`
-	Author *Author `json:"author"`
+	gorm.Model
+	Isbn   string `json:"isbn"`
+	Title  string `json:"title"`
+	Author Author `json:"author"`
 }
 
 func getBooks(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	OpenDB()
+	defer db.Debug().Close()
+	var books []Book
+	db.Debug().Find(&books)
 	json.NewEncoder(w).Encode(books)
+
 }
 func getBook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
-	for _, item := range books {
-		if item.ID == params["id"] {
-			json.NewEncoder(w).Encode(item)
-			return
-		}
+	requestedId := params["id"]
+	OpenDB()
+	defer db.Debug().Close()
+	var book Book
+	if !db.Debug().First(&book, requestedId).RecordNotFound() {
+		json.NewEncoder(w).Encode(book)
+		return
 	}
-	json.NewEncoder(w).Encode("Sorry, there is no item with this id")
-
+	json.NewEncoder(w).Encode("There is no book with this id")
 }
+
 func createBook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	var book Book
 	_ = json.NewDecoder(r.Body).Decode(&book)
-	book.ID = strconv.Itoa(rand.Intn(10000000))
-	books = append(books, book)
+	OpenDB()
+	defer db.Debug().Close()
+	db.Debug().Create(&book)
 	json.NewEncoder(w).Encode(book)
-
 }
+
 func updateBook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
-	for index, item := range books {
-		if item.ID == params["id"] {
-			books = append(books[:index], books[index+1:]...)
-			var book Book
-			_ = json.NewDecoder(r.Body).Decode(&book)
-			book.ID = params["id"]
-			books = append(books, book)
-			json.NewEncoder(w).Encode(book)
-			return
-		}
+	requestedId := params["id"]
+	var updatedBook Book
+	OpenDB()
+	defer db.Debug().Close()
+	if db.Debug().First(&updatedBook, requestedId).RecordNotFound() {
+		json.NewEncoder(w).Encode("There is no book with this id")
+		return
 	}
+	_ = json.NewDecoder(r.Body).Decode(&updatedBook)
+	db.Debug().Save(updatedBook)
+	json.NewEncoder(w).Encode(updatedBook)
 }
-
 func deleteBook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
-	for index, item := range books {
-		if item.ID == params["id"] {
-			books = append(books[:index], books[index+1:]...)
-			break
-		}
+	requestedId := params["id"]
+	var book Book
+	OpenDB()
+	defer db.Debug().Close()
+	db.Debug().First(&book, requestedId)
+	db.Debug().Delete(book)
+	json.NewEncoder(w).Encode("Book deleted!")
+
+}
+
+func OpenDB() {
+	db, err = gorm.Open("sqlite3", "test.db")
+	if err != nil {
+		panic("Flied to connect to db")
 	}
-	json.NewEncoder(w).Encode(books)
 }
