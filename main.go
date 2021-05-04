@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/jinzhu/gorm"
 )
 
 func main() {
@@ -23,11 +22,4 @@ func main() {
 
 	log.Fatal(http.ListenAndServe(":8000", router))
 
-}
-
-func InitialMigration() {
-	db, err = gorm.Open("sqlite3", "test.db")
-	OpenDB()
-	defer db.Close()
-	db.AutoMigrate(&Book{}, &Author{})
 }

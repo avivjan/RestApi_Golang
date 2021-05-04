@@ -79,10 +79,3 @@ func deleteBook(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode("Book deleted!")
 
 }
-
-func OpenDB() {
-	db, err = gorm.Open("sqlite3", "test.db")
-	if err != nil {
-		panic("Flied to connect to db")
-	}
-}
